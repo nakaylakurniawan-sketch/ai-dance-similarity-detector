@@ -332,7 +332,7 @@ if result:
         ],
     })
     st.subheader("Body-part comparison")
-    st.bar_chart(chart_data, x="Bagian tubuh", y="Similarity (%)", y_min=0, y_max=100)
+    st.bar_chart(chart_data, x="Bagian tubuh", y="Similarity (%)")
 
     st.subheader("Pose visualization")
     ref_col, user_col = st.columns(2)
