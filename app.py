@@ -8,6 +8,22 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import os
+from pathlib import Path
+
+# Memastikan model MediaPipe dapat dibaca
+import mediapipe as mp
+
+model_path = (
+    Path(mp.__file__).parent
+    / "modules"
+    / "pose_landmark"
+    / "pose_landmark_lite.tflite"
+)
+
+if model_path.exists():
+    os.chmod(model_path, 0o644)
+
 # ------------------------------------------------------------
 # DanceAI | AI Dance Similarity Detector
 # ------------------------------------------------------------
