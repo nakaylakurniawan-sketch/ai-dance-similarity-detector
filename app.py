@@ -189,30 +189,78 @@ def normalize_sequence(sequence: np.ndarray) -> np.ndarray:
     return np.asarray(normalized, dtype=np.float32)
 
 
-def dtw_distance(seq_a: np.ndarray, seq_b: np.ndarray, positions=None) -> float:
-    """Classic DTW with a frame-to-frame mean landmark distance."""
+def dtw_distance(
+    seq_a: np.ndarray,
+    seq_b: np.ndarray,
+    positions=None,
+    visibility_a=None,
+    visibility_b=None,
+    visibility_threshold: float = 0.5,
+) -> float:
+
+    if visibility_a is None:
+        visibility_a = np.ones(seq_a.shape[:2], dtype=np.float32)
+
+    if visibility_b is None:
+        visibility_b = np.ones(seq_b.shape[:2], dtype=np.float32)
+
+    visibility_a = np.asarray(visibility_a)
+    visibility_b = np.asarray(visibility_b)
+
     if positions is not None:
         seq_a = seq_a[:, positions, :]
         seq_b = seq_b[:, positions, :]
+        visibility_a = visibility_a[:, positions]
+        visibility_b = visibility_b[:, positions]
 
     n, m = len(seq_a), len(seq_b)
+
+    frame_costs = np.full((n, m), np.nan, dtype=np.float32)
+    valid_costs = []
+
+    min_common = min(2, seq_a.shape[1])
+
+    for i in range(n):
+        for j in range(m):
+
+            common = (
+                (visibility_a[i] >= visibility_threshold)
+                & (visibility_b[j] >= visibility_threshold)
+            )
+
+            if np.count_nonzero(common) >= min_common:
+
+                distances = np.linalg.norm(
+                    seq_a[i, common, :] - seq_b[j, common, :],
+                    axis=1,
+                )
+
+                cost = float(np.mean(distances))
+                frame_costs[i, j] = cost
+                valid_costs.append(cost)
+
+    if not valid_costs:
+        raise ValueError(
+            "Landmark yang terlihat bersama belum cukup untuk dibandingkan. "
+            "Coba gunakan video dengan bagian tubuh yang lebih terlihat."
+        )
+
+    invalid_penalty = float(np.percentile(valid_costs, 95) + 0.1)
+    frame_costs[~np.isfinite(frame_costs)] = invalid_penalty
+
     dp = np.full((n + 1, m + 1), np.inf, dtype=np.float32)
     dp[0, 0] = 0.0
 
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            frame_cost = float(
-                np.mean(np.linalg.norm(seq_a[i - 1] - seq_b[j - 1], axis=1))
-            )
-            dp[i, j] = frame_cost + min(
+
+            dp[i, j] = frame_costs[i - 1, j - 1] + min(
                 dp[i - 1, j],
                 dp[i, j - 1],
                 dp[i - 1, j - 1],
             )
 
-    # Normalized accumulated cost. This is a distance, not a probability.
     return float(dp[n, m] / max(n + m, 1))
-
 
 def distance_to_score(distance: float) -> float:
     """Map DTW distance to an easy-to-read heuristic score (not a probability)."""
@@ -226,10 +274,26 @@ def analyze(reference_bytes: bytes, user_bytes: bytes):
     ref = normalize_sequence(ref_raw)
     usr = normalize_sequence(usr_raw)
 
-    overall_distance = dtw_distance(ref, usr)
-    arm_distance = dtw_distance(ref, usr, ARM_POS)
-    leg_distance = dtw_distance(ref, usr, LEG_POS)
-    torso_distance = dtw_distance(ref, usr, TORSO_POS)
+    overall_distance = dtw_distance(
+        ref, usr,
+        visibility_a=ref_visibility,
+        visibility_b=usr_visibility
+    )
+
+    arm_distance = dtw_distance(
+        ref, usr, ARM_POS,
+        ref_visibility, usr_visibility
+    )
+
+    leg_distance = dtw_distance(
+        ref, usr, LEG_POS,
+        ref_visibility, usr_visibility
+    )
+
+    torso_distance = dtw_distance(
+        ref, usr, TORSO_POS,
+        ref_visibility, usr_visibility
+    )
 
     return {
         "reference_frames": ref_raw,
