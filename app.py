@@ -96,6 +96,7 @@ def extract_pose_video(video_bytes: bytes, sample_fps: int = 5, max_frames: int 
     temp_path = None
     cap = None
     poses = []
+    visibility_sequences = []
     preview_rgb = []
     timestamps = []
 
@@ -152,6 +153,7 @@ def extract_pose_video(video_bytes: bytes, sample_fps: int = 5, max_frames: int 
                                 mp_pose.POSE_CONNECTIONS,
                             )
                             poses.append(coords)
+                            visibility_sequences.append(visibility[BODY_IDS])
                             preview_rgb.append(
                                 cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
                             )
@@ -165,7 +167,7 @@ def extract_pose_video(video_bytes: bytes, sample_fps: int = 5, max_frames: int 
                 "dan video memiliki pencahayaan yang cukup."
             )
 
-        return np.asarray(poses), preview_rgb, timestamps
+        return np.asarray(poses), np.asarray(visibility_sequences), preview_rgb, timestamps
 
     finally:
         if cap is not None:
