@@ -118,7 +118,7 @@ def extract_pose_video(video_bytes: bytes, sample_fps: int = 5, max_frames: int 
         frame_index = 0
         with mp_pose.Pose(
             static_image_mode=False,
-            model_complexity=0,
+            model_complexity=1,
             smooth_landmarks=True,
             enable_segmentation=False,
             min_detection_confidence=0.5,
