@@ -220,8 +220,8 @@ def distance_to_score(distance: float) -> float:
 
 
 def analyze(reference_bytes: bytes, user_bytes: bytes):
-    ref_raw, ref_previews, ref_times = extract_pose_video(reference_bytes)
-    usr_raw, usr_previews, usr_times = extract_pose_video(user_bytes)
+    ref_raw, ref_visibility, ref_previews, ref_times = extract_pose_video(reference_bytes)
+    usr_raw, usr_visibility, usr_previews, usr_times = extract_pose_video(user_bytes)
 
     ref = normalize_sequence(ref_raw)
     usr = normalize_sequence(usr_raw)
